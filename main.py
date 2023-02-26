@@ -1,6 +1,7 @@
 import io
 import math
 import struct
+import argparse
 import itertools
 import subprocess
 
@@ -59,9 +60,20 @@ def ffmpeg_writer(out_filename, in_audio, framerate):
     return subprocess.Popen(args, stdin=subprocess.PIPE) 
 
 def main():
-    framerate = 60
-    audio = 'result.wav'
-    writer = ffmpeg_writer('res_test.mp4', audio, framerate)
+    parser = argparse.ArgumentParser(
+                    prog = 'VScope',
+                    description = 'Oscilloscope music visualizer'
+                    )
+    parser.add_argument('input_audio')
+    parser.add_argument('output_video')
+    parser.add_argument('-r', '--framerate', type=int, required=False, default=60)
+    parser.add_argument('-s', '--size', type=int, required=False, default=1000)
+    args = parser.parse_args()
+    
+    framerate = args.framerate
+    size = args.size
+    audio = args.input_audio
+    writer = ffmpeg_writer(args.output_video, audio, framerate)
     with audioread.audio_open(audio) as sound:
         channels = sound.channels
         if channels != 2:
@@ -71,12 +83,12 @@ def main():
         frame_window = samplerate//framerate
         frame_incr = 0
         for dots in grouper(get_channels(data, channels), frame_window):
-            with cairo.SVGSurface(None, 1000, 1000) as surface: 
+            with cairo.SVGSurface(None, size, size) as surface: 
                 incr = 0
                 buf = io.BytesIO()
                 context = cairo.Context(surface) 
                 context.set_antialias(cairo.Antialias.BEST) 
-                context.scale(500, 500)
+                context.scale(size//2, size//2)
                 context.translate(1, 1)
                 context.set_source_rgb(0, 0, 0)
                 context.rectangle(-1, -1, 2, 2)
