@@ -1,12 +1,10 @@
 import io
 import math
 import struct
-import typing
 import itertools
 import subprocess
 
 from collections import deque
-from dataclasses import dataclass
 
 import cairo
 import ffmpeg
@@ -14,12 +12,6 @@ import audioread
  
 def clamp(v, mn, mx): 
     return min(max(v, mn), mx)
-    
-def safediv(x, y, s=0):
-    if y == 0:
-        return s
-    else:
-        return x/y
 
 def slide_window(l, n):
     it = iter(l)
@@ -32,6 +24,11 @@ def grouper(l, n):
     chunks = zip(*[iter(l)]*n) #itertools.zip_longest(*[iter(l)]*n)
     for chunk in chunks:
         yield chunk
+        
+def length(p1, p2):
+    x1, y1 = p1
+    x2, y2 = p2
+    return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
 def get_channels(reader, channels):
     for samples in grouper((bytes(x) for x in grouper(itertools.chain.from_iterable(reader), 2)), channels):
@@ -81,20 +78,15 @@ def main():
                 context.set_antialias(cairo.Antialias.BEST) 
                 context.scale(500, 500)
                 context.translate(1, 1)
-                #context.set_line_width(0.004)
                 context.set_source_rgb(0, 0, 0)
                 context.rectangle(-1, -1, 2, 2)
                 context.fill()
                 context.set_source_rgb(0, 1, 1)
                 
-                #ls = deque(maxlen=frame_window) # TODO
                 for p1, p2 in slide_window(dots, 2):
-                    x1, y1 = p1
-                    x2, y2 = p2
-                    length = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
-                    context.set_line_width(clamp(0.005-0.002*length, 0.00025, 0.005))
-                    context.set_source_rgba(*hsv_to_rgb(((incr/(frame_window*3.25)+0.67)+frame_incr/frame_window*1.5)%1, 1, 1), clamp(1-(length*15), 0.1, 1-(length)))
-                    #context.set_source_rgba(0, 1-length*25., 1, clamp(1-(length*15), 0.15, 1-(length)))
+                    l = length(p1, p2)
+                    context.set_line_width(clamp(0.005-0.002*l, 0.00025, 0.005))
+                    context.set_source_rgba(*hsv_to_rgb(((incr/(frame_window*3.25)+0.67)+frame_incr/frame_window*1.5)%1, 1, 1), clamp(1-l*15, 0.1, 1-l)))
                     context.move_to(*p1)
                     context.line_to(*p2)
                     context.stroke()
